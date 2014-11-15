@@ -94,6 +94,7 @@ void welcome() {
 }
 
 void scanName() {
+	system("clear");
 	printf("Entre com seu nome: ");
 	scanf("%s", playersName[0]);
 	system("clear");
@@ -106,6 +107,7 @@ void initializePlayersName() {
 }
 
 void scanVersion() {
+	system("clear");
 	printf("Entre com a versão do dominó que deseja jogar "
 			"(6 -> duplo-seis, 9 -> duplo-nove, 12 -> duplo-doze, "
 			"15 -> duplo-quinze ou 18 -> duplo-dezoito): ");
@@ -119,6 +121,7 @@ void scanVersion() {
 }
 
 void scanPlayers() {
+	system("clear");
 	printf(
 			"Entre com o número de jogadores, contando com você (min.: 2, máx.: %d): ",
 			MAX_PLAYERS);
@@ -131,6 +134,7 @@ void scanPlayers() {
 }
 
 void scanPiecesPerPlayer() {
+	system("clear");
 	printf("Entre com o número de peças por jogador (6 ou 7): ");
 	scanf("%d", &piecesPerPlayer);
 	if (!(piecesPerPlayer == 6 || piecesPerPlayer == 7)) {
@@ -149,6 +153,7 @@ void initAndDistributePieces() {
 }
 
 void firstPlay() {
+	system("clear");
 	pieceResponse pR = getFirstPlayer(playersHand, playersNumber, version);
 	printTurn();
 	if (pR.player != NONE) {
@@ -171,65 +176,87 @@ void firstPlay() {
 	system("clear");
 }
 
-int playTheGame(){
-	while(1){
+int playTheGame() {
+	while (1) {
+		system("clear");
 		currentPlayer = getNextPlayer();
-		userPlay();
-		if(currentPlayer==0){
-
-		}else{
+		if (currentPlayer == 0) {
+			printf("%s é a sua vez de jogar...\n", playersName[0]);
+			sleep(SLEEP_DEF_TIME);
+			userPlay();
+		} else {
 			//computerPlay();
 		}
+		system("clear");
 	}
 	return 1;
 }
 
-
-int getNextPlayer(){
+int getNextPlayer() {
 	int result;
-	result = currentPlayer+1;
-	if(result==playersNumber){
+	result = currentPlayer + 1;
+	if (result == playersNumber) {
 		result = 0;
 	}
 	return result;
 }
 
-
 void userPlay() {
 	int index = 0, compatibility = NOT_COMPATIBLE, hasPiece;
-	hasPiece = hasCompatiblePiece(table,playersHand[0]);
+	hasPiece = hasCompatiblePiece(table, playersHand[0]);
+	system("clear");
+	printTurn();
 	printTable();
 	printf("Sua mão:\n");
 	printHighlightedPieceArray(playersHand[0], index);
-	if(!hasPiece){
-		printf("[Comprar]");
+	if (!hasPiece) {
+		printf("[Comprar]\n");
 	}
 	char c;
 	piece p;
 	do {
-		hasPiece = hasCompatiblePiece(table,playersHand[0]);
+		hasPiece = hasCompatiblePiece(table, playersHand[0]);
 		//initializes termios input config
 		initAttr();
 		while ((c = getcha()) != '\n') {
 			//^[[C is the code of right arrow
 			if (c == 'C' && index < playersHand[0].size - 1) {
 				index++;
-			//^[[D is the code of left arrow
+				//^[[D is the code of left arrow
 			} else if (c == 'D' && index > 0) {
 				index--;
+			} else if (c == 'A') {
+				index = 0;
+			} else if (c == 'B' && !hasPiece) {
+				index = playersHand[0].size;
 			}
 			system("clear");
+			printTurn();
 			printTable();
 			printf("Sua mão:\n");
 			printHighlightedPieceArray(playersHand[0], index);
-			if(!hasPiece){
-				printf("[Comprar]");
+			if (!hasPiece && index != playersHand[0].size) {
+				printf("[Comprar]\n");
+			} else if (!hasPiece && index == playersHand[0].size) {
+				highPrintf("[Comprar]\n");
 			}
 		}
 		//return config to default
 		closeAttr();
-		compatibility = checkPieceCompatibility(table,
-				getPiece(playersHand[0], index));
+		if (hasPiece) {
+			compatibility = checkPieceCompatibility(table,
+					getPiece(playersHand[0], index));
+		} else if (!hasPiece && index == playersHand[0].size){
+			int buyResult = buyPiece(&buyHand, &(playersHand[0]));
+			if(buyResult==SUCESS){
+				userPlay();
+			}else if(buyResult==CANNOT_BUY){
+				puts("Não há mais peças para serem compradas.");
+				sleep(SLEEP_TURN_TIME);
+				idleTurns++;
+				return;
+			}
+		}
 
 	} while (compatibility == NOT_COMPATIBLE);
 	if (table.size == 0) {
@@ -240,7 +267,7 @@ void userPlay() {
 	}
 	addPiece(&table, compatibility, playersHand[0].piece[index]);
 	removePiece(&(playersHand[0]), index);
-	system("clear");
+	idleTurns = 0;
 }
 
 int scanMoveSide() {
