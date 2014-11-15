@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
 
 //ANSI colors code
 #define COLOR_RESET "\x1B[0m"
@@ -210,12 +211,13 @@ int buyPiece(pieceArray *from, pieceArray *to){
 
 compatiblePiecesResponse getCompatiblePieces(pieceArray *table, pieceArray *player){
 	compatiblePiecesResponse compatibles;
+	compatibles.pieceIndex = NULL;
 	int size = 0;
 	int i;
 	for(i=0; i<player->size; i++){
 		if(checkPieceCompatibility(*table,player->piece[i])!=NOT_COMPATIBLE){
 			size++;
-			compatibles.pieceIndex = realloc(compatibles.pieceIndex,size*sizeof(int));
+			assert((compatibles.pieceIndex = realloc(compatibles.pieceIndex,size*sizeof(int)))!=NULL);
 			compatibles.pieceIndex[size-1] = i;
 		}
 	}

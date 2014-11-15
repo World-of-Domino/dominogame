@@ -14,8 +14,8 @@
 #define MAX_NAME_LENGHT 25
 #define MAX_PLAYERS 4
 
-#define SLEEP_DEF_TIME 0
-#define SLEEP_TURN_TIME 0
+#define SLEEP_DEF_TIME 1
+#define SLEEP_TURN_TIME 1
 
 #define SIM_1_NAME "A"
 #define SIM_2_NAME "B"
@@ -164,12 +164,14 @@ void firstPlay() {
 				playersName[pR.player]);
 		addPiece(&table, END, getPiece(playersHand[pR.player], pR.index));
 		removePiece(&(playersHand[pR.player]), pR.index);
+		turns++;
 	} else {
 		currentPlayer = 0;
 		printf(
 				"Como nenhum jogador possui peça dupla você é o primeiro a jogar\n"
 						"Selecione através das setas a peça que deseja jogar\n");
 		userPlay();
+		turns++;
 	}
 	sleep(SLEEP_TURN_TIME);
 	system("clear");
@@ -184,11 +186,12 @@ int playTheGame() {
 		currentPlayer = getNextPlayer();
 		if (currentPlayer == 0) {
 			printf("%s é a sua vez de jogar...\n", playersName[0]);
-			sleep(4);
+			sleep(SLEEP_DEF_TIME);
 			userPlay();
 		} else {
 			computerPlay();
 		}
+		turns++;
 		system("clear");
 	}
 	return 1;
@@ -273,11 +276,18 @@ void userPlay() {
 }
 
 void computerPlay() {
+	system("clear");
+	printf("%s está a jogar...\n", playersName[currentPlayer]);
+	sleep(SLEEP_TURN_TIME);
 	int hasPiece = hasCompatiblePiece(table, playersHand[currentPlayer]);
 	int buyResult;
 	while (!hasPiece) {
 		buyResult = buyPiece(&buyHand, &playersHand[currentPlayer]);
 		if (buyResult == CANNOT_BUY) {
+			printf("O jogador não possui uma peça compatível e "
+					"não há mais peças para serem compradas"
+					", por isso passou seu turno.\n");
+			sleep(SLEEP_TURN_TIME);
 			idleTurns++;
 			return;
 		}
@@ -290,9 +300,9 @@ void computerPlay() {
 	}
 	addPiece(&table,compatibility,playersHand[currentPlayer].piece[compatibles.pieceIndex[0]]);
 	removePiece(&playersHand[currentPlayer],compatibles.pieceIndex[0]);
-	puts("pc jogou");
+	printf("%s jogou\n", playersName[currentPlayer]);
 	printTable();
-	sleep(4);
+	sleep(SLEEP_DEF_TIME);
 	system("clear");
 }
 
