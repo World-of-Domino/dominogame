@@ -11,6 +11,9 @@
 #include <string.h>
 #include <termios.h>
 
+#define WON_GAME 1
+#define CONTINUE 0
+
 #define MAX_NAME_LENGHT 25
 #define MAX_PLAYERS 4
 
@@ -44,9 +47,9 @@ void initAndDistributePieces();
 //make the first play of game
 void firstPlay();
 //enable UI in user turn and handle user move
-void userPlay();
+int userPlay();
 //algorithm to make simulated moves
-void computerPlay();
+int computerPlay();
 //print table with label
 void printTable();
 //print turn number with label
@@ -187,9 +190,17 @@ int playTheGame() {
 		if (currentPlayer == 0) {
 			printf("%s é a sua vez de jogar...\n", playersName[0]);
 			sleep(SLEEP_DEF_TIME);
-			userPlay();
+			if(userPlay()==WON_GAME){
+				puts("user won");
+				return 1;
+				exit(0);
+			}
 		} else {
-			computerPlay();
+			if(computerPlay()==WON_GAME){
+				puts("computer won");
+				return 1;
+				exit(0);
+			}
 		}
 		turns++;
 		system("clear");
@@ -206,7 +217,7 @@ int getNextPlayer() {
 	return result;
 }
 
-void userPlay() {
+int userPlay() {
 	int index = 0, compatibility = NOT_COMPATIBLE, hasPiece;
 	hasPiece = hasCompatiblePiece(table, playersHand[0]);
 	system("clear");
@@ -254,12 +265,12 @@ void userPlay() {
 		} else if (!hasPiece && index == playersHand[0].size) {
 			int buyResult = buyPiece(&buyHand, &(playersHand[0]));
 			if (buyResult == SUCESS) {
-				userPlay();
+				return userPlay();
 			} else if (buyResult == CANNOT_BUY) {
 				puts("Não há mais peças para serem compradas.");
 				sleep(SLEEP_TURN_TIME);
 				idleTurns++;
-				return;
+				return CONTINUE;
 			}
 		}
 
@@ -273,9 +284,13 @@ void userPlay() {
 	addPiece(&table, compatibility, playersHand[0].piece[index]);
 	removePiece(&(playersHand[0]), index);
 	idleTurns = 0;
+	if(playersHand[0].size==0){
+		return WON_GAME;
+	}
+	return CONTINUE;
 }
 
-void computerPlay() {
+int computerPlay() {
 	system("clear");
 	printf("%s está a jogar...\n", playersName[currentPlayer]);
 	sleep(SLEEP_TURN_TIME);
@@ -289,7 +304,7 @@ void computerPlay() {
 					", por isso passou seu turno.\n");
 			sleep(SLEEP_TURN_TIME);
 			idleTurns++;
-			return;
+			return CONTINUE;
 		}
 		hasPiece = hasCompatiblePiece(table, playersHand[currentPlayer]);
 	}
@@ -304,6 +319,10 @@ void computerPlay() {
 	printTable();
 	sleep(SLEEP_DEF_TIME);
 	system("clear");
+	if(playersHand[currentPlayer].size==0){
+		return WON_GAME;
+	}
+	return CONTINUE;
 }
 
 int scanMoveSide() {

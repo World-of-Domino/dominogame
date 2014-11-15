@@ -97,6 +97,12 @@ int removePiece(pieceArray *pA, int index) {
 		for (i = index; i < pA->size; i++) {
 			pA->piece[i] = pA->piece[i + 1];
 		}
+		if (pA->size-1 == 0){
+			free(pA->piece);
+			pA->piece = NULL;
+			pA->size--;
+			return SUCESS;
+		}
 		if ((pA->piece = realloc(pA->piece, sizeof(piece) * (pA->size - 1)))
 				== NULL) {
 			return ERROR;
