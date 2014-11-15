@@ -1,0 +1,22 @@
+Algoritmo de estratégia para jogadas simuladas:
+
+Enquanto não houver peças compatíveis comprar peça
+Se houver apenas uma peça disponível 
+	Jogar peça
+Senão
+	//Jogada defensiva
+	Verificar entre as peças compatíveis se há repetição do lado B
+	Se houver uma peça com o maior número de repetição
+		Jogar peça
+	Senão 	
+		//Jogada ofensiva contra o jogador humano
+		Verificar lados jogados mais vezes pelo usuário
+		Se houver uma peça compatível e com lado B mais vezes jogado pelo usuário
+			Jogar peça
+		Senão
+			Jogar a peça com menor índice dentre as compatíveis e que possuem lado B entre os mais jogados pelo usuário
+	
+
+
+
+
