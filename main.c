@@ -45,6 +45,8 @@ void initAndDistributePieces();
 void firstPlay();
 //enable UI in user turn and handle user move
 void userPlay();
+//algorithm to make simulated moves
+void computerPlay();
 //print table with label
 void printTable();
 //print turn number with label
@@ -182,10 +184,10 @@ int playTheGame() {
 		currentPlayer = getNextPlayer();
 		if (currentPlayer == 0) {
 			printf("%s é a sua vez de jogar...\n", playersName[0]);
-			sleep(SLEEP_DEF_TIME);
+			sleep(4);
 			userPlay();
 		} else {
-			//computerPlay();
+			computerPlay();
 		}
 		system("clear");
 	}
@@ -246,11 +248,11 @@ void userPlay() {
 		if (hasPiece) {
 			compatibility = checkPieceCompatibility(table,
 					getPiece(playersHand[0], index));
-		} else if (!hasPiece && index == playersHand[0].size){
+		} else if (!hasPiece && index == playersHand[0].size) {
 			int buyResult = buyPiece(&buyHand, &(playersHand[0]));
-			if(buyResult==SUCESS){
+			if (buyResult == SUCESS) {
 				userPlay();
-			}else if(buyResult==CANNOT_BUY){
+			} else if (buyResult == CANNOT_BUY) {
 				puts("Não há mais peças para serem compradas.");
 				sleep(SLEEP_TURN_TIME);
 				idleTurns++;
@@ -270,6 +272,30 @@ void userPlay() {
 	idleTurns = 0;
 }
 
+void computerPlay() {
+	int hasPiece = hasCompatiblePiece(table, playersHand[currentPlayer]);
+	int buyResult;
+	while (!hasPiece) {
+		buyResult = buyPiece(&buyHand, &playersHand[currentPlayer]);
+		if (buyResult == CANNOT_BUY) {
+			idleTurns++;
+			return;
+		}
+		hasPiece = hasCompatiblePiece(table, playersHand[currentPlayer]);
+	}
+	compatiblePiecesResponse compatibles = getCompatiblePieces(&table,&playersHand[currentPlayer]);
+	int compatibility = checkPieceCompatibility(table,playersHand[currentPlayer].piece[compatibles.pieceIndex[0]]);
+	if(compatibility==BOTH){
+		compatibility = END;
+	}
+	addPiece(&table,compatibility,playersHand[currentPlayer].piece[compatibles.pieceIndex[0]]);
+	removePiece(&playersHand[currentPlayer],compatibles.pieceIndex[0]);
+	puts("pc jogou");
+	printTable();
+	sleep(4);
+	system("clear");
+}
+
 int scanMoveSide() {
 	char c;
 	puts(
@@ -284,7 +310,7 @@ int scanMoveSide() {
 			return BEGIN;
 		}
 	}
-	//return config to default
+//return config to default
 	closeAttr();
 	return ERROR;
 }

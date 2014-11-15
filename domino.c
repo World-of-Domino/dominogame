@@ -208,6 +208,21 @@ int buyPiece(pieceArray *from, pieceArray *to){
 	}
 }
 
+compatiblePiecesResponse getCompatiblePieces(pieceArray *table, pieceArray *player){
+	compatiblePiecesResponse compatibles;
+	int size = 0;
+	int i;
+	for(i=0; i<player->size; i++){
+		if(checkPieceCompatibility(*table,player->piece[i])!=NOT_COMPATIBLE){
+			size++;
+			compatibles.pieceIndex = realloc(compatibles.pieceIndex,size*sizeof(int));
+			compatibles.pieceIndex[size-1] = i;
+		}
+	}
+	compatibles.size = size;
+	return compatibles;
+}
+
 void printPieceArray(pieceArray pA) {
 	int i;
 	for (i = 0; i < pA.size; i++) {

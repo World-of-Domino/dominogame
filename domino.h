@@ -42,6 +42,11 @@ struct {
 }typedef pieceResponse;
 
 struct {
+	int *pieceIndex;
+	int size;
+} typedef compatiblePiecesResponse;
+
+struct {
 	int *pieces;
 	int size;
 }typedef statistics;
@@ -126,6 +131,8 @@ int checkPieceCompatibility(pieceArray pA, piece p);
 int hasCompatiblePiece(pieceArray table, pieceArray hand);
 
 int buyPiece(pieceArray *from, pieceArray *to);
+
+compatiblePiecesResponse getCompatiblePieces(pieceArray *table, pieceArray *player);
 
 /* Print a pieceArray human-readable in the console
  *
