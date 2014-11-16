@@ -4,17 +4,22 @@ Enquanto não houver peças compatíveis comprar peça
 Se houver apenas uma peça disponível 
 	Jogar peça
 Senão
-	//Jogada defensiva
-	Verificar entre as peças compatíveis se há repetição do lado B
-	Se houver uma peça com o maior número de repetição
+	Listar as peças compatíveis
+	Se houver um duplo na lista
+		Jogar peça
+	Senão
+		Remover os não duplos da lista
+	Listar as peças cujo lado B se repete na mão do simulador
+	Se houver uma peça com o maior número de repetições
 		Jogar peça
 	Senão 	
-		//Jogada ofensiva contra o jogador humano
-		Verificar lados jogados mais vezes pelo usuário
-		Se houver uma peça compatível e com lado B mais vezes jogado pelo usuário
-			Jogar peça
-		Senão
-			Jogar a peça com menor índice dentre as compatíveis e que possuem lado B entre os mais jogados pelo usuário
+		Remover as peças com menor número de repetição
+	Listar as peças mais vezes jogadas pelo usuário
+	Se houver uma peça cujo lado foi mais vezes jogado pelo jogador humano
+		Jogar peça
+	Senão
+		Jogar peça de menor index
+
 	
 
 
