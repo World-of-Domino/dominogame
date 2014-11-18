@@ -27,6 +27,10 @@
 
 #define CANNOT_BUY 0
 
+#define EASY 0
+#define MEDIUM 1
+#define HARD 2
+
 struct {
 	int side[2];
 }typedef piece;
@@ -44,7 +48,7 @@ struct {
 struct {
 	int *pieceIndex;
 	int size;
-} typedef compatiblePiecesResponse;
+}typedef compatiblePiecesResponse;
 
 struct {
 	int *pieces;
@@ -132,7 +136,18 @@ int hasCompatiblePiece(pieceArray table, pieceArray hand);
 
 int buyPiece(pieceArray *from, pieceArray *to);
 
-compatiblePiecesResponse getCompatiblePieces(pieceArray *table, pieceArray *player);
+int getBestPieceIndexToMove(pieceArray table, pieceArray simHand, int version,
+		pieceArray userBought, int mode);
+pieceArray getPiecesUserBought(pieceArray playerHand, pieceArray userBought,
+								piece matchingPiece);
+pieceArray getDoubles(pieceArray pA);
+int getPieceIndex(pieceArray pA, piece p);
+int pieceEquals(piece p, piece q);
+pieceArray getMostRepeatedSides(pieceArray pA, int version);
+int getMaxTimesOfRepetition(pieceArray pA, int version);
+int getRepetitionTimes(pieceArray pA, int s);
+int containsPiece(pieceArray pA, piece p);
+piece getMatchingPiece(pieceArray table);
 
 /* Print a pieceArray human-readable in the console
  *

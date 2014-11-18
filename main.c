@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <termios.h>
+#include <time.h>
 
 #define WON_GAME 1
 #define CONTINUE 0
@@ -18,15 +19,15 @@
 #define MAX_PLAYERS 4
 
 #define SLEEP_DEF_TIME 1
-#define SLEEP_TURN_TIME 1
+#define SLEEP_TURN_TIME 2
 
-#define SIM_1_NAME "A"
-#define SIM_2_NAME "B"
-#define SIM_3_NAME "C"
+#define SIM_1_NAME "McCartney"
+#define SIM_2_NAME "Torvalds"
+#define SIM_3_NAME "Newton"
 
 //global variables
-int version, playersNumber, piecesPerPlayer, turns, idleTurns, currentPlayer;
-pieceArray buyHand, playersHand[MAX_PLAYERS], table;
+int version, playersNumber, piecesPerPlayer, turns, idleTurns, currentPlayer, mode;
+pieceArray buyHand, playersHand[MAX_PLAYERS], table, userBought;
 char playersName[4][MAX_NAME_LENGHT];
 
 //Active functions
@@ -42,6 +43,8 @@ void scanVersion();
 void scanPlayers();
 //scan number of pieces per player
 void scanPiecesPerPlayer();
+//scan mode of game
+void scanMode();
 //initialize table and distribute pieces to players and the remaining to buy array
 void initAndDistributePieces();
 //make the first play of game
@@ -74,12 +77,15 @@ void closeAttr();
 struct termios old_attr, new_attr;
 
 void main() {
+	srand(time(NULL));
 	welcome();
 	scanName();
 	initializePlayersName();
 	scanVersion();
 	scanPlayers();
 	scanPiecesPerPlayer();
+	scanMode();
+	initPieceArray(&userBought);
 	initPieceArray(&buyHand);
 	generatePieces(&buyHand, version);
 	initAndDistributePieces();
@@ -135,6 +141,46 @@ void scanPlayers() {
 		printInvalidInput();
 		scanPlayers();
 	}
+	system("clear");
+}
+
+void scanMode(){
+	system("clear");
+	fflush(stdin);
+	while(getchar()!='\n');
+	int index = EASY;
+	puts("Selecione o modo de jogo:");
+	highPrintf("[FÁCIL]\n");
+	printf("[MÉDIO]\n[DIFÍCIL]");
+	initAttr();
+	char c;
+	while ((c = getcha()) != '\n') {
+		//^[[C is the code of right arrow
+		if (c == 'A' && index>EASY) {
+			index--;
+		} else if (c == 'B' && index<HARD) {
+			index++;
+		}
+		system("clear");
+		puts("Selecione o modo de jogo:");
+		switch(index){
+			case EASY:
+				highPrintf("[FÁCIL]\n");
+				printf("[MÉDIO]\n[DIFÍCIL]\n");
+				break;
+			case MEDIUM:
+				printf("[FÁCIL]\n");
+				highPrintf("[MÉDIO]\n");
+				printf("[DIFÍCIL]\n");
+				break;
+			case HARD:
+				printf("[FÁCIL]\n[MÉDIO]\n");
+				highPrintf("[DIFÍCIL]\n");
+				break;
+		}
+	}
+	closeAttr();
+	mode = index;
 	system("clear");
 }
 
@@ -202,6 +248,11 @@ int playTheGame() {
 				exit(0);
 			}
 		}
+		if(idleTurns==playersNumber){
+			puts("closed game");
+			return 1;
+			exit(0);
+		}
 		turns++;
 		system("clear");
 	}
@@ -230,9 +281,9 @@ int userPlay() {
 	}
 	char c;
 	piece p;
+	fflush(stdin);
 	do {
 		hasPiece = hasCompatiblePiece(table, playersHand[0]);
-		//initializes termios input config
 		initAttr();
 		while ((c = getcha()) != '\n') {
 			//^[[C is the code of right arrow
@@ -257,18 +308,23 @@ int userPlay() {
 				highPrintf("[Comprar]\n");
 			}
 		}
-		//return config to default
 		closeAttr();
 		if (hasPiece) {
 			compatibility = checkPieceCompatibility(table,
 					getPiece(playersHand[0], index));
 		} else if (!hasPiece && index == playersHand[0].size) {
+			piece hasnt;
+			hasnt.side[0] = table.piece[0].side[0];
+			hasnt.side[1] = table.piece[table.size-1].side[1];
+			if(!containsPiece(userBought,hasnt)){
+				addPiece(&userBought,END,hasnt);
+			}
 			int buyResult = buyPiece(&buyHand, &(playersHand[0]));
 			if (buyResult == SUCESS) {
 				return userPlay();
 			} else if (buyResult == CANNOT_BUY) {
 				puts("Não há mais peças para serem compradas.");
-				sleep(SLEEP_TURN_TIME);
+				sleep(SLEEP_DEF_TIME);
 				idleTurns++;
 				return CONTINUE;
 			}
@@ -281,8 +337,7 @@ int userPlay() {
 	if (compatibility == BOTH) {
 		compatibility = scanMoveSide();
 	}
-	addPiece(&table, compatibility, playersHand[0].piece[index]);
-	removePiece(&(playersHand[0]), index);
+	movePiece(&playersHand[0],&table,index,compatibility);
 	idleTurns = 0;
 	if(playersHand[0].size==0){
 		return WON_GAME;
@@ -308,13 +363,10 @@ int computerPlay() {
 		}
 		hasPiece = hasCompatiblePiece(table, playersHand[currentPlayer]);
 	}
-	compatiblePiecesResponse compatibles = getCompatiblePieces(&table,&playersHand[currentPlayer]);
-	int compatibility = checkPieceCompatibility(table,playersHand[currentPlayer].piece[compatibles.pieceIndex[0]]);
-	if(compatibility==BOTH){
-		compatibility = END;
-	}
-	addPiece(&table,compatibility,playersHand[currentPlayer].piece[compatibles.pieceIndex[0]]);
-	removePiece(&playersHand[currentPlayer],compatibles.pieceIndex[0]);
+	int index = getBestPieceIndexToMove(table,playersHand[currentPlayer],version,userBought,mode);
+	int compatibility = checkPieceCompatibility(table,
+						playersHand[currentPlayer].piece[index]);
+	movePiece(&playersHand[currentPlayer],&table,index,compatibility);
 	printf("%s jogou\n", playersName[currentPlayer]);
 	printTable();
 	sleep(SLEEP_DEF_TIME);

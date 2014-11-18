@@ -9,6 +9,8 @@ Senão
 		Jogar peça
 	Senão
 		Remover os não duplos da lista
+	Listar os lados de peças que o usuário já comprou
+	
 	Listar as peças cujo lado B se repete na mão do simulador
 	Se houver uma peça com o maior número de repetições
 		Jogar peça

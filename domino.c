@@ -30,10 +30,11 @@ void initPiece(piece *p, int a, int b) {
 }
 
 void initPieceArray(pieceArray *pA) {
+	pA->piece = NULL;
 	pA->size = 0;
 }
 
-piece getPiece(const pieceArray pA, int index) {
+piece getPiece(pieceArray pA, int index) {
 	if (index < 0 || index >= pA.size) {
 		piece ret;
 		ret.side[0] = ERROR;
@@ -54,6 +55,9 @@ int setPiece(pieceArray *pA, int index, piece piece) {
 }
 
 int addPiece(pieceArray *pA, int where, piece piece) {
+	if(where==BOTH){
+		where = END;
+	}
 	if (!(where == BEGIN || where == END)) {
 		return ERROR;
 	} else {
@@ -139,8 +143,7 @@ int distributePiece(pieceArray *from, pieceArray *to, int piecesPerPlayer){
 		}
 		int rand = randomIndexNumber(from->size);
 		piece p = from->piece[rand];
-		addPiece(to, END, p);
-		removePiece(from, rand);
+		movePiece(from,to,rand,END);
 	}
 	return SUCESS;
 }
@@ -215,20 +218,165 @@ int buyPiece(pieceArray *from, pieceArray *to){
 	}
 }
 
-compatiblePiecesResponse getCompatiblePieces(pieceArray *table, pieceArray *player){
-	compatiblePiecesResponse compatibles;
-	compatibles.pieceIndex = NULL;
-	int size = 0;
+int movePiece(pieceArray *from, pieceArray *to, int pieceIndex, int where){
+	if(addPiece(to,where,from->piece[pieceIndex])&&
+			removePiece(from,pieceIndex)){
+		return SUCESS;
+	}else{
+		return FALSE;
+	}
+}
+
+int getBestPieceIndexToMove(pieceArray table, pieceArray simHand, int version, pieceArray userBought, int mode){
+	pieceArray compatibles;
+	initPieceArray(&compatibles);
 	int i;
-	for(i=0; i<player->size; i++){
-		if(checkPieceCompatibility(*table,player->piece[i])!=NOT_COMPATIBLE){
-			size++;
-			assert((compatibles.pieceIndex = realloc(compatibles.pieceIndex,size*sizeof(int)))!=NULL);
-			compatibles.pieceIndex[size-1] = i;
+	for (i=0; i<simHand.size; i++){
+		if(checkPieceCompatibility(table,simHand.piece[i])!=NOT_COMPATIBLE){
+			addPiece(&compatibles,END,simHand.piece[i]);
 		}
 	}
-	compatibles.size = size;
-	return compatibles;
+	if(mode==EASY){
+		return getPieceIndex(simHand, compatibles.piece[0]);
+	}
+	pieceArray doubles = getDoubles(compatibles);
+	if(doubles.size!=0){
+		compatibles = doubles;
+	}
+	if(mode==MEDIUM){
+		return getPieceIndex(simHand, compatibles.piece[0]);
+	}
+	piece matchingPiece = getMatchingPiece(table);
+	pieceArray bought = getPiecesUserBought(compatibles,userBought,matchingPiece);
+	if(bought.size!=0){
+		compatibles = bought;
+	}
+	pieceArray repeatedSides = getMostRepeatedSides(compatibles,version);
+	if(repeatedSides.size!=0){
+		compatibles = repeatedSides;
+	}
+	return getPieceIndex(simHand, compatibles.piece[0]);
+}
+
+piece getMatchingPiece(pieceArray table){
+	piece matchingPiece;
+	matchingPiece.side[0] = table.piece[0].side[0];
+	matchingPiece.side[1] = table.piece[table.size-1].side[1];
+	return matchingPiece;
+}
+
+pieceArray getPiecesUserBought(pieceArray playerHand, pieceArray userBought,
+								piece matchingPiece){
+	pieceArray response;
+	initPieceArray(&response);
+	int i,j;
+	for (i=0; i<playerHand.size; i++){
+		piece p = playerHand.piece[i];
+		if(p.side[0]==matchingPiece.side[0]||p.side[0]==matchingPiece.side[1]){
+			p.side[0] = -1;
+		}
+		if(p.side[1]==matchingPiece.side[0]||p.side[1]==matchingPiece.side[1]){
+			p.side[1] = -1;
+		}
+		for(j=0; j<userBought.size; j++){
+			piece p2 = userBought.piece[j];
+			if(sideEquals(p,p2)&&!containsPiece(response,playerHand.piece[i])){
+				addPiece(&response,END,playerHand.piece[i]);
+			}
+		}
+	}
+
+	return response;
+}
+
+int sideEquals(piece p, piece q){
+	if(p.side[0]==q.side[0]||p.side[0]==q.side[1]||
+			p.side[1]==q.side[0]||p.side[1]==q.side[1]){
+		return TRUE;
+	}
+	return FALSE;
+}
+
+pieceArray getDoubles(pieceArray pA){
+	pieceArray doubles;
+	initPieceArray(&doubles);
+	int i;
+	for (i=0; i<pA.size; i++){
+		piece p = pA.piece[i];
+		if(p.side[0]==p.side[1]){
+			addPiece(&doubles,END,p);
+		}
+	}
+	return doubles;
+}
+
+pieceArray getMostRepeatedSides(pieceArray pA, int version){
+	pieceArray mostRepeated;
+	initPieceArray(&mostRepeated);
+	int i,j;
+	int maxRepeats = getMaxTimesOfRepetition(pA,version);
+	for (i=0; i<=version; i++){
+		if(getRepetitionTimes(pA,i)==maxRepeats){
+			for (j=0; j<pA.size; j++){
+				piece p = pA.piece[j];
+				if(((p.side[0]==i)||(p.side[1]==i))&&!containsPiece(mostRepeated,p)){
+					addPiece(&mostRepeated,END,p);
+				}
+			}
+		}
+	}
+	return mostRepeated;
+}
+
+int containsPiece(pieceArray pA, piece p){
+	int i;
+	for (i=0; i<pA.size; i++){
+		if(pieceEquals(pA.piece[i],p)){
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+int getMaxTimesOfRepetition(pieceArray pA, int version){
+	int i,j, max=0, repeats;
+	for(i=0; i<=version; i++){
+		repeats = getRepetitionTimes(pA,i);
+		if(repeats>max){
+			max = repeats;
+		}
+	}
+	return max;
+}
+
+int getRepetitionTimes(pieceArray pA, int s){
+	int i,result=0;
+	for (i=0; i<pA.size; i++){
+		piece p = pA.piece[i];
+		if(p.side[0]==s||p.side[1]==s){
+			result++;
+		}
+	}
+	return result;
+}
+
+int getPieceIndex(pieceArray pA, piece p){
+	int i;
+	for (i=0; i<pA.size; i++){
+		if(pieceEquals(pA.piece[i],p)){
+			return i;
+		}
+	}
+	return NONE;
+}
+
+int pieceEquals(piece p, piece q){
+	if((p.side[0]==q.side[0]&&p.side[1]==q.side[1])||
+			(p.side[1]==q.side[0]&&p.side[0]==q.side[1])){
+		return TRUE;
+	}else{
+		return FALSE;
+	}
 }
 
 void printPieceArray(pieceArray pA) {
