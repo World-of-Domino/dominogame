@@ -74,7 +74,7 @@ piece getPiece(pieceArray p, int index);
  * @param *pA 	pointer to a pieceArray already allocated
  * @param index index to substitution
  * @param piece piece to place in indicated index
- * @return 		returns SUCESS if it was possible to substitute, else returns ERROR
+ * @return 		SUCESS or ERROR
  */
 int setPiece(pieceArray *pA, int index, piece piece);
 
@@ -83,17 +83,21 @@ int setPiece(pieceArray *pA, int index, piece piece);
  * @param *pA 	pointer to a pieceArray already allocated
  * @param where place to add the new piece has to be BEGIN or END
  * @param piece piece to add in indicated location
- * @return 		returns SUCESS if it was possible to add piece, else returns ERROR
+ * @return 		SUCESS or ERROR
  */
 int addPiece(pieceArray *pA, int where, piece piece);
 
+/* Permut piece sizes
+ *
+ * @param *piece	pointer to a piece you want to permut
+ */
 void permutPiece(piece *piece);
 
 /* Removes a piece from a pieceArray and decrements size of array
  *
  * @param *pA 	pointer to a pieceArray already allocated
  * @param index index of piece desired to be removed
- * @return 		returns SUCESS if it was possible to remove, else returns ERROR and don't change pA instance
+ * @return 		SUCESS or ERROR
  */
 int removePiece(pieceArray *pA, int index);
 
@@ -101,7 +105,7 @@ int removePiece(pieceArray *pA, int index);
  *
  * @param *pA 		pointer to a pieceArray already allocated
  * @param version 	version of playing Domino
- * @return 			SUCESS if it was possible to generate pieces and instantiate in pA, else returns ERROR
+ * @return 			SUCESS or ERROR
  */
 int generatePieces(pieceArray *pA, int version);
 
@@ -110,7 +114,7 @@ int generatePieces(pieceArray *pA, int version);
  * @param *from				pointer to pieceArray which contains all pieces
  * @param *to	 			pointer to pieceArray which will get the pieces
  * @param piecesPerPlayer	number of pieces per player
- * @return 					returns SUCESS if it was possible to distribute all required pieces, else returns ERROR
+ * @return 					SUCESS or ERROR
  */
 int distributePiece(pieceArray *from, pieceArray *to, int piecesPerPlayer);
 
@@ -128,26 +132,45 @@ pieceResponse getFirstPlayer(pieceArray playersHand[], int playersNumber,
  *
  * @param pA 	pieceArray to check piece compatibility
  * @param p 	piece to be checked
- * @return 		returns the status of compatibility, it is, NOT_COMPATIBLE, BEGIN, END or BOTH
+ * @return 		NOT_COMPATIBLE, BEGIN, END or BOTH
  */
 int checkPieceCompatibility(pieceArray pA, piece p);
 
+/* Checks if hand has compatible piece with table
+ *
+ * @param table	table you want to check compatibility
+ * @param hand 	hand you want to check if has compatible piece
+ * @return 		TRUE or FALSE
+ */
 int hasCompatiblePiece(pieceArray table, pieceArray hand);
 
+/* Buys a random piece
+ *
+ * @param *from	pointer to pieceArray that you want to buy the piece
+ * @param *to	pointer to pieceArray that will receive the bought piece
+ * @return 		SUCESS, CANNOT_BUY (if there's no more pieces to be bought) or ERROR
+ */
 int buyPiece(pieceArray *from, pieceArray *to);
 
+/* Algorithm that returns the best piece to move based in table, probability and user statistics
+ *
+ * @param *table		pointer to the table
+ * @param *simHand		pointer to the simulator's hand
+ * @param version		version of game
+ * @param userBought	statistics of pieces user had to buy
+ * @param mode			mode of game (EASY, MEDIUM or HARD)
+ * @return 				index of piece to be moved
+ */
 int getBestPieceIndexToMove(pieceArray table, pieceArray simHand, int version,
 		pieceArray userBought, int mode);
-pieceArray getPiecesUserBought(pieceArray playerHand, pieceArray userBought,
-								piece matchingPiece);
-pieceArray getDoubles(pieceArray pA);
-int getPieceIndex(pieceArray pA, piece p);
-int pieceEquals(piece p, piece q);
-pieceArray getMostRepeatedSides(pieceArray pA, int version);
-int getMaxTimesOfRepetition(pieceArray pA, int version);
-int getRepetitionTimes(pieceArray pA, int s);
+
+/* Checks if an arrayPiece has certain piece ignoring permutation
+ *
+ * @param pA	pieceArray you want to search the piece
+ * @param p		piece you want to search
+ * @return 		TRUE or FALSE
+ */
 int containsPiece(pieceArray pA, piece p);
-piece getMatchingPiece(pieceArray table);
 
 /* Print a pieceArray human-readable in the console
  *
@@ -162,6 +185,11 @@ void printPieceArray(pieceArray pA);
  */
 void printHighlightedPieceArray(pieceArray pA, int index);
 
+/* Prints a formated text with green color
+ *
+ * @param *format	string containing the format of printf
+ * @param ...		serie of arguments based on format
+ */
 void highPrintf(char *format, ...);
 
 #endif /* DOMINO_H_ */

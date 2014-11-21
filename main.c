@@ -4,33 +4,45 @@
  *  Created on: Nov 11, 2014
  *      Author: giovanni
  */
-#include "domino.c"
-#include <locale.h>
+
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <time.h>
+#include <unistd.h>
 
-#define WON_GAME 1
-#define CONTINUE 0
+#include "domino.c"
+#include "domino.h"
 
+//initial configuration definitions
 #define MAX_NAME_LENGHT 25
 #define MAX_PLAYERS 4
 
-#define SLEEP_DEF_TIME 1
-#define SLEEP_TURN_TIME 2
-
+//name of simulators
 #define SIM_1_NAME "McCartney"
 #define SIM_2_NAME "Torvalds"
 #define SIM_3_NAME "Newton"
 
+//return of userPlay() and computerPlay()
+#define WON_GAME 1
+#define CONTINUE 0
+
+//sleep time definitions
+#define SLEEP_DEF_TIME 1
+#define SLEEP_TURN_TIME 2
+
+//return of playAgainScan()
+#define DONT_PLAY_AGAIN 0
+#define PLAY_AGAIN 1
+#define PLAY_AGAIN_NEW_CONFIG 2
+
 //global variables
-int version, playersNumber, piecesPerPlayer, turns, idleTurns, currentPlayer, mode;
+int version, playersNumber, piecesPerPlayer, turns, idleTurns, currentPlayer,
+		mode;
 pieceArray buyHand, playersHand[MAX_PLAYERS], table, userBought;
 char playersName[4][MAX_NAME_LENGHT];
 
-//Active functions
 //shows a welcome message
 void welcome();
 //scans user name to playersName[0]
@@ -49,8 +61,14 @@ void scanMode();
 void initAndDistributePieces();
 //make the first play of game
 void firstPlay();
+//play the game until it has a winner or game get locked
+int playTheGame();
+//returns the next player
+int getNextPlayer();
 //enable UI in user turn and handle user move
 int userPlay();
+//scan which side of table user want to move the piece
+int scanMoveSide();
 //algorithm to make simulated moves
 int computerPlay();
 //print table with label
@@ -59,32 +77,45 @@ void printTable();
 void printTurn();
 //print message of invalid input
 void printInvalidInput();
-//scan which side of table user want to move the piece
-int scanMoveSide();
-//returns the next player
-int getNextPlayer();
-//play the game until it has a winner or game get locked
-int playTheGame();
-
 //get char in event time
 int getcha();
-//Auxiliar functions to getcha()
 //initialize termios attributes
 void initAttr();
 //define input attributes back to normal
 void closeAttr();
+//scan if user want to play the game again with others or same config
+int playAgainScan();
+//scan answer for yes or not question by arrow input
+int yesOrNotScan(char *message);
 
+//stores termios and common attributes
 struct termios old_attr, new_attr;
 
-void main() {
+void main(int argc, char *argv[]) {
+	//initializes random function with current time
 	srand(time(NULL));
-	welcome();
-	scanName();
+	//there's no arguments
+	if (argc == 1) {
+		welcome();
+		scanName();
+		//user is playing again
+	} else if (argc > 1) {
+		strcpy(playersName[0], argv[1]);
+	}
 	initializePlayersName();
-	scanVersion();
-	scanPlayers();
-	scanPiecesPerPlayer();
-	scanMode();
+	//first play or user want to play again with new config
+	if (argc < 6) {
+		scanVersion();
+		scanPlayers();
+		scanPiecesPerPlayer();
+		scanMode();
+		//user is playing again with same config
+	} else if (argc >= 6) {
+		version = atoi(argv[2]);
+		playersNumber = atoi(argv[3]);
+		piecesPerPlayer = atoi(argv[4]);
+		mode = atoi(argv[5]);
+	}
 	initPieceArray(&userBought);
 	initPieceArray(&buyHand);
 	generatePieces(&buyHand, version);
@@ -93,8 +124,26 @@ void main() {
 	idleTurns = 0;
 	initPieceArray(&table);
 	firstPlay();
+	//keeps in this function until someone wins or game get locked
 	playTheGame();
-
+	int playAgain = playAgainScan();
+	switch (playAgain) {
+	char cmd[50];
+case (DONT_PLAY_AGAIN):
+	//hank
+	exit(0);
+case (PLAY_AGAIN):
+	sprintf(cmd, "./main %s %d %d %d %d", playersName[0], version,
+			playersNumber, piecesPerPlayer, mode);
+	system(cmd);
+	exit(0);
+case (PLAY_AGAIN_NEW_CONFIG):
+	sprintf(cmd, "./main %s", playersName[0]);
+	system(cmd);
+	exit(0);
+	}
+	system("clear");
+	exit(0);
 }
 
 void welcome() {
@@ -125,7 +174,9 @@ void scanVersion() {
 	scanf("%d", &version);
 	if (!(version == 6 || version == 9 || version == 12 || version == 15
 			|| version == 18)) {
+		system("clear");
 		printInvalidInput();
+		sleep(SLEEP_DEF_TIME);
 		scanVersion();
 	}
 	system("clear");
@@ -138,16 +189,20 @@ void scanPlayers() {
 			MAX_PLAYERS);
 	scanf("%d", &playersNumber);
 	if (playersNumber < 2 || playersNumber > MAX_PLAYERS) {
+		system("clear");
 		printInvalidInput();
+		sleep(SLEEP_DEF_TIME);
 		scanPlayers();
 	}
 	system("clear");
 }
 
-void scanMode(){
+void scanMode() {
 	system("clear");
+	//cleans stdin and consume all chars before
 	fflush(stdin);
-	while(getchar()!='\n');
+	while (getchar() != '\n')
+		;
 	int index = EASY;
 	puts("Selecione o modo de jogo:");
 	highPrintf("[FÁCIL]\n");
@@ -156,27 +211,27 @@ void scanMode(){
 	char c;
 	while ((c = getcha()) != '\n') {
 		//^[[C is the code of right arrow
-		if (c == 'A' && index>EASY) {
+		if (c == 'A' && index > EASY) {
 			index--;
-		} else if (c == 'B' && index<HARD) {
+		} else if (c == 'B' && index < HARD) {
 			index++;
 		}
 		system("clear");
 		puts("Selecione o modo de jogo:");
-		switch(index){
-			case EASY:
-				highPrintf("[FÁCIL]\n");
-				printf("[MÉDIO]\n[DIFÍCIL]\n");
-				break;
-			case MEDIUM:
-				printf("[FÁCIL]\n");
-				highPrintf("[MÉDIO]\n");
-				printf("[DIFÍCIL]\n");
-				break;
-			case HARD:
-				printf("[FÁCIL]\n[MÉDIO]\n");
-				highPrintf("[DIFÍCIL]\n");
-				break;
+		switch (index) {
+		case EASY:
+			highPrintf("[FÁCIL]\n");
+			printf("[MÉDIO]\n[DIFÍCIL]\n");
+			break;
+		case MEDIUM:
+			printf("[FÁCIL]\n");
+			highPrintf("[MÉDIO]\n");
+			printf("[DIFÍCIL]\n");
+			break;
+		case HARD:
+			printf("[FÁCIL]\n[MÉDIO]\n");
+			highPrintf("[DIFÍCIL]\n");
+			break;
 		}
 	}
 	closeAttr();
@@ -189,7 +244,9 @@ void scanPiecesPerPlayer() {
 	printf("Entre com o número de peças por jogador (6 ou 7): ");
 	scanf("%d", &piecesPerPlayer);
 	if (!(piecesPerPlayer == 6 || piecesPerPlayer == 7)) {
+		system("clear");
 		printInvalidInput();
+		sleep(SLEEP_DEF_TIME);
 		scanPiecesPerPlayer();
 	}
 	system("clear");
@@ -207,6 +264,7 @@ void firstPlay() {
 	system("clear");
 	pieceResponse pR = getFirstPlayer(playersHand, playersNumber, version);
 	printTurn();
+	//if someone has a double
 	if (pR.player != NONE) {
 		currentPlayer = pR.player;
 		printf("%s é o primeiro a jogar pois possui a maior peça dupla\n",
@@ -214,6 +272,7 @@ void firstPlay() {
 		addPiece(&table, END, getPiece(playersHand[pR.player], pR.index));
 		removePiece(&(playersHand[pR.player]), pR.index);
 		turns++;
+		//if nobody has double
 	} else {
 		currentPlayer = 0;
 		printf(
@@ -236,27 +295,89 @@ int playTheGame() {
 		if (currentPlayer == 0) {
 			printf("%s é a sua vez de jogar...\n", playersName[0]);
 			sleep(SLEEP_DEF_TIME);
-			if(userPlay()==WON_GAME){
-				puts("user won");
-				return 1;
-				exit(0);
+			if (userPlay() == WON_GAME) {
+				//finish hand pieces
+				puts("Parabéns, você ganhou o jogo!");
+				break;
 			}
 		} else {
-			if(computerPlay()==WON_GAME){
-				puts("computer won");
-				return 1;
-				exit(0);
+			if (computerPlay() == WON_GAME) {
+				//finish hand pieces
+				printf("%s ganhou o jogo! Mais sorte da próxima vez.\n",
+						playersName[currentPlayer]);
+				break;
 			}
 		}
-		if(idleTurns==playersNumber){
-			puts("closed game");
-			return 1;
-			exit(0);
+		if (idleTurns == playersNumber) {
+			//there's no more piece in buyHand and nobody moved for 1 turn
+			system("clear");
+			puts("O jogo está fechado!");
+			puts("O vencedor será decidido pelo menor número peças...");
+			sleep(SLEEP_DEF_TIME);
+			int i, min = version, n = 0, mini;
+			//checks who has less pieces
+			for (i = 0; i < playersNumber; i++) {
+				if (playersHand[i].size <= min) {
+					min = playersHand[i].size;
+					n++;
+					mini = i;
+				}
+			}
+			if (n == 1) {
+				printf("O vencedor é %s com %d peças.", playersName[mini],
+						playersHand[mini].size);
+			} else {
+				puts(
+						"Como houve mais de um jogador com o mesmo número de peças, não houve um vencedor.");
+			}
+			break;
 		}
 		turns++;
 		system("clear");
 	}
-	return 1;
+	sleep(SLEEP_TURN_TIME);
+	system("clear");
+	return SUCESS;
+}
+
+int playAgainScan() {
+	int result = DONT_PLAY_AGAIN;
+	if (yesOrNotScan("Deseja jogar novamente ?")) {
+		result = PLAY_AGAIN;
+		if (yesOrNotScan("Deseja jogar com outra configuração de jogo ?")) {
+			result = PLAY_AGAIN_NEW_CONFIG;
+		}
+	}
+	return result;
+}
+
+int yesOrNotScan(char *message) {
+	int i = TRUE;
+	char c;
+	system("clear");
+	puts(message);
+	highPrintf("[SIM]\n");
+	printf("[NÃO]\n");
+	initAttr();
+	while ((c = getcha()) != '\n') {
+		if (c == 'A' && i == FALSE) {
+			i = TRUE;
+		} else if (c == 'B' && i == TRUE) {
+			i = FALSE;
+		}
+		system("clear");
+		puts(message);
+		if (i) {
+			highPrintf("[SIM]\n");
+			printf("[NÃO]\n");
+		} else {
+			printf("[SIM]\n");
+			highPrintf("[NÃO]\n");
+		}
+	}
+	closeAttr();
+	return i;
+
 }
 
 int getNextPlayer() {
@@ -312,12 +433,13 @@ int userPlay() {
 		if (hasPiece) {
 			compatibility = checkPieceCompatibility(table,
 					getPiece(playersHand[0], index));
+			//user clicked to buy piece
 		} else if (!hasPiece && index == playersHand[0].size) {
 			piece hasnt;
 			hasnt.side[0] = table.piece[0].side[0];
-			hasnt.side[1] = table.piece[table.size-1].side[1];
-			if(!containsPiece(userBought,hasnt)){
-				addPiece(&userBought,END,hasnt);
+			hasnt.side[1] = table.piece[table.size - 1].side[1];
+			if (!containsPiece(userBought, hasnt)) {
+				addPiece(&userBought, END, hasnt);
 			}
 			int buyResult = buyPiece(&buyHand, &(playersHand[0]));
 			if (buyResult == SUCESS) {
@@ -329,7 +451,6 @@ int userPlay() {
 				return CONTINUE;
 			}
 		}
-
 	} while (compatibility == NOT_COMPATIBLE);
 	if (table.size == 0) {
 		addPiece(&(playersHand[0]), END, playersHand[0].piece[index]);
@@ -337,9 +458,9 @@ int userPlay() {
 	if (compatibility == BOTH) {
 		compatibility = scanMoveSide();
 	}
-	movePiece(&playersHand[0],&table,index,compatibility);
+	movePiece(&playersHand[0], &table, index, compatibility);
 	idleTurns = 0;
-	if(playersHand[0].size==0){
+	if (playersHand[0].size == 0) {
 		return WON_GAME;
 	}
 	return CONTINUE;
@@ -363,15 +484,16 @@ int computerPlay() {
 		}
 		hasPiece = hasCompatiblePiece(table, playersHand[currentPlayer]);
 	}
-	int index = getBestPieceIndexToMove(table,playersHand[currentPlayer],version,userBought,mode);
+	int index = getBestPieceIndexToMove(table, playersHand[currentPlayer],
+			version, userBought, mode);
 	int compatibility = checkPieceCompatibility(table,
-						playersHand[currentPlayer].piece[index]);
-	movePiece(&playersHand[currentPlayer],&table,index,compatibility);
+			playersHand[currentPlayer].piece[index]);
+	movePiece(&playersHand[currentPlayer], &table, index, compatibility);
 	printf("%s jogou\n", playersName[currentPlayer]);
 	printTable();
 	sleep(SLEEP_DEF_TIME);
 	system("clear");
-	if(playersHand[currentPlayer].size==0){
+	if (playersHand[currentPlayer].size == 0) {
 		return WON_GAME;
 	}
 	return CONTINUE;
